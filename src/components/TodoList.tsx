@@ -18,9 +18,10 @@ export const TodoList: React.FC<TodoListProps> = ({
 }) => {
   const [isEditingId, setIsEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [isLoadingId, setIsLoadingId] = useState(0);
+  const [isLoadingId, setIsLoadingId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Фокусуємо інпут при початку редагування
   useEffect(() => {
     if (isEditingId !== null) {
       inputRef.current?.focus();
@@ -32,32 +33,42 @@ export const TodoList: React.FC<TodoListProps> = ({
     setEditTitle('');
   };
 
+  const handleDelete = async (id: number) => {
+    setIsLoadingId(id);
+    try {
+      await deleteTodo(id);
+    } catch {
+      showError('Unable to delete a todo');
+    } finally {
+      setIsLoadingId(null);
+    }
+  };
+
+  const handleChangeStatus = async (todo: Todo) => {
+    setIsLoadingId(todo.id);
+    try {
+      await changeTodo(todo.id, todo.title, !todo.completed);
+    } catch {
+      showError('Unable to update a todo');
+    } finally {
+      setIsLoadingId(null);
+    }
+  };
+
   const saveEditing = async (todo: Todo) => {
     const trimmedTitle = editTitle.trim();
 
-    // Якщо назва не змінилась — просто скасовуємо редагування
     if (trimmedTitle === todo.title) {
       cancelEditing();
-
       return;
     }
 
-    // Якщо назва порожня — видаляємо завдання
     if (trimmedTitle.length === 0) {
-      setIsLoadingId(todo.id);
-      try {
-        await deleteTodo(todo.id);
-      } catch {
-        showError('Unable to delete a todo');
-      } finally {
-        setIsLoadingId(0);
-        cancelEditing();
-      }
-
+      await handleDelete(todo.id);
+      cancelEditing();
       return;
     }
 
-    // Інакше оновлюємо завдання
     setIsLoadingId(todo.id);
     try {
       await changeTodo(todo.id, trimmedTitle, todo.completed);
@@ -65,7 +76,7 @@ export const TodoList: React.FC<TodoListProps> = ({
     } catch {
       showError('Unable to update a todo');
     } finally {
-      setIsLoadingId(0);
+      setIsLoadingId(null);
     }
   };
 
@@ -85,16 +96,7 @@ export const TodoList: React.FC<TodoListProps> = ({
               id={`todo-status-${todo.id}`}
               type="checkbox"
               checked={todo.completed}
-              onChange={async () => {
-                setIsLoadingId(todo.id);
-                try {
-                  await changeTodo(todo.id, todo.title, !todo.completed);
-                } catch {
-                  showError('Unable to update a todo');
-                } finally {
-                  setIsLoadingId(0);
-                }
-              }}
+              onChange={() => handleChangeStatus(todo)}
               className="todo__status"
               data-cy="TodoStatus"
             />
@@ -103,9 +105,9 @@ export const TodoList: React.FC<TodoListProps> = ({
 
           {isEditingId === todo.id ? (
             <form
-              onSubmit={async e => {
+              onSubmit={e => {
                 e.preventDefault();
-                await saveEditing(todo);
+                saveEditing(todo);
               }}
             >
               <input
@@ -115,14 +117,9 @@ export const TodoList: React.FC<TodoListProps> = ({
                 data-cy="TodoTitleField"
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
-                onBlur={() => saveEditing(todo)} // Зберігаємо на втраті фокусу
-                onKeyDown={e => {
-                  if (e.key === 'Escape') {
-                    cancelEditing(); // Скасовуємо редагування
-                  }
-                }}
+                onBlur={() => saveEditing(todo)}
+                onKeyDown={e => e.key === 'Escape' && cancelEditing()}
                 placeholder="Empty todo will be deleted"
-                autoFocus
               />
             </form>
           ) : (
@@ -142,16 +139,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 type="button"
                 className="todo__remove"
                 data-cy="TodoDelete"
-                onClick={async () => {
-                  setIsLoadingId(todo.id);
-                  try {
-                    await deleteTodo(todo.id);
-                  } catch {
-                    showError('Unable to delete a todo');
-                  } finally {
-                    setIsLoadingId(0);
-                  }
-                }}
+                onClick={() => handleDelete(todo.id)}
               >
                 ×
               </button>

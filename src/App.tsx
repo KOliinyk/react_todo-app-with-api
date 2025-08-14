@@ -12,6 +12,7 @@ import { TodoList } from './components/TodoList';
 import { FormTodo } from './components/FormTodos';
 import { FooterTodos } from './components/FooterTodos';
 import { ErrorTodos } from './components/ErrorTodos';
+
 type Filter = 'All' | 'Active' | 'Completed';
 
 export const App: React.FC = () => {
@@ -22,14 +23,25 @@ export const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Завантаження з localStorage або з API
   useEffect(() => {
-    getTodos()
-      .then(setTodos)
-      .catch(() => {
-        setError('Unable to load todos');
-        throw new Error('Cant find todos');
-      });
+    const saved = localStorage.getItem('todos');
+
+    if (saved) {
+      setTodos(JSON.parse(saved));
+    } else {
+      getTodos()
+        .then(setTodos)
+        .catch(() => {
+          setError('Unable to load todos');
+        });
+    }
   }, []);
+
+  // Збереження в localStorage при зміні todos
+  useEffect(() => {
+    localStorage.setItem('todos', JSON.stringify(todos));
+  }, [todos]);
 
   const filteredTodos = todos.filter(todo => {
     if (filterSelect === 'Active') {
@@ -54,7 +66,6 @@ export const App: React.FC = () => {
     }
 
     setIsDisabledInput(true);
-
     const tempTodo: Todo = {
       id: 0,
       userId: 3177,
@@ -76,13 +87,9 @@ export const App: React.FC = () => {
     } catch {
       setError('Unable to add a todo');
       setTodos(prev => prev.filter(todo => todo.id !== 0));
-      throw new Error('Cant create new todos');
     } finally {
       setIsDisabledInput(false);
-
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 0);
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
   }
 
@@ -94,7 +101,6 @@ export const App: React.FC = () => {
       })
       .catch(() => {
         setError('Unable to delete a todo');
-        throw new Error('Cant delete todos');
       });
   }
 
@@ -109,13 +115,11 @@ export const App: React.FC = () => {
       })
       .catch(() => {
         setError('Unable to update a todo');
-        throw new Error('Cant change todos');
       });
   }
 
   function changeComplite() {
     const isAllCompleted = todos.every(todo => todo.completed);
-
     const todosToUpdate = todos.filter(
       todo => todo.completed === isAllCompleted,
     );
@@ -141,9 +145,7 @@ export const App: React.FC = () => {
           userId: todo.userId,
         }),
       ),
-    ).catch(() => {
-      setError('Unable to update todos');
-    });
+    ).catch(() => setError('Unable to update todos'));
   }
 
   function filter(type: Filter) {
@@ -156,7 +158,7 @@ export const App: React.FC = () => {
     Promise.allSettled(completedTodos.map(todo => deleteTodo(todo.id)))
       .then(results => {
         const failedTodos = completedTodos.filter(
-          (todo, index) => results[index].status === 'rejected',
+          (_, index) => results[index].status === 'rejected',
         );
 
         setTodos(prevTodos =>
@@ -168,16 +170,12 @@ export const App: React.FC = () => {
             return failedTodos.some(failed => failed.id === todo.id);
           }),
         );
-
         inputRef.current?.focus();
-
         if (failedTodos.length > 0) {
           setError('Unable to delete a todo');
         }
       })
-      .catch(() => {
-        setError('Unexpected error');
-      });
+      .catch(() => setError('Unexpected error'));
   }
 
   function clearError() {
@@ -191,7 +189,6 @@ export const App: React.FC = () => {
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
-
       <div className="todoapp__content">
         <FormTodo
           postTodos={postTodos}
@@ -202,27 +199,24 @@ export const App: React.FC = () => {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
         />
-
         {todos.length > 0 && (
-          <TodoList
-            todos={filteredTodos}
-            deleteTodo={removeTodos}
-            changeTodo={changeTodo}
-            toggleAll={changeComplite}
-            showError={setError}
-          />
-        )}
-
-        {todos.length > 0 && (
-          <FooterTodos
-            todos={todos}
-            filter={filter}
-            clearCompleted={clearCompleted}
-            selected={filterSelect}
-          />
+          <>
+            <TodoList
+              todos={filteredTodos}
+              deleteTodo={removeTodos}
+              changeTodo={changeTodo}
+              toggleAll={changeComplite}
+              showError={setError}
+            />
+            <FooterTodos
+              todos={todos}
+              filter={filter}
+              clearCompleted={clearCompleted}
+              selected={filterSelect}
+            />
+          </>
         )}
       </div>
-
       <ErrorTodos error={error} clearError={clearError} />
     </div>
   );
