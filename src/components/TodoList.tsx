@@ -13,7 +13,6 @@ export const TodoList: React.FC<TodoListProps> = ({
   todos,
   deleteTodo,
   changeTodo,
-  toggleAll,
   showError,
 }) => {
   const [isEditingId, setIsEditingId] = useState<number | null>(null);
@@ -60,12 +59,14 @@ export const TodoList: React.FC<TodoListProps> = ({
 
     if (trimmedTitle === todo.title) {
       cancelEditing();
+
       return;
     }
 
     if (trimmedTitle.length === 0) {
       await handleDelete(todo.id);
       cancelEditing();
+
       return;
     }
 
@@ -158,14 +159,6 @@ export const TodoList: React.FC<TodoListProps> = ({
           )}
         </div>
       ))}
-
-      <button
-        className={`toggle-all ${
-          todos.length > 0 && todos.every(t => t.completed) ? 'active' : ''
-        }`}
-        onClick={toggleAll}
-        data-cy="ToggleAllButton"
-      />
     </section>
   );
 };

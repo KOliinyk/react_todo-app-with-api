@@ -92,6 +92,7 @@
 .item-enter {
   max-height: 0;
 }
+
 .item-enter-active {
   overflow: hidden;
   max-height: 0;
@@ -105,6 +106,7 @@
   margin: 0;
   border-bottom: none;
 }
+
 .item-exit-active {
   overflow: hidden;
   max-height: 0;
@@ -118,17 +120,20 @@
 .temp-item-enter {
   max-height: 0;
 }
+
 .temp-item-enter-active {
   overflow: hidden;
   max-height: 0;
   transition: max-height 0.3s ease-in-out;
 }
+
 .temp-item-exit {
   max-height: 0;
   padding: 0;
   margin: 0;
   border-bottom: none;
 }
+
 .temp-item-exit-active {
   transform: translateY(-58px);
   max-height: 0;

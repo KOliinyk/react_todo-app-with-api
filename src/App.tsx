@@ -23,27 +23,29 @@ export const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Завантаження з localStorage або з API
+  // Утиліта для видалення порожніх todo
+  const cleanTodos = (todoList: Todo[]) =>
+    todoList.filter(t => t.title.trim() !== '');
+
+  // Завантаження з localStorage або API
   useEffect(() => {
     const saved = localStorage.getItem('todos');
 
     if (saved) {
-      setTodos(JSON.parse(saved));
+      setTodos(cleanTodos(JSON.parse(saved)));
     } else {
       getTodos()
-        .then(setTodos)
-        .catch(() => {
-          setError('Unable to load todos');
-        });
+        .then(fetched => setTodos(cleanTodos(fetched)))
+        .catch(() => setError('Unable to load todos'));
     }
   }, []);
 
   // Збереження в localStorage при зміні todos
   useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos));
+    localStorage.setItem('todos', JSON.stringify(cleanTodos(todos)));
   }, [todos]);
 
-  const filteredTodos = todos.filter(todo => {
+  const filteredTodos = cleanTodos(todos).filter(todo => {
     if (filterSelect === 'Active') {
       return !todo.completed;
     }
@@ -58,7 +60,7 @@ export const App: React.FC = () => {
   async function postTodos(title: string) {
     const trimmedTitle = title.trim();
 
-    if (trimmedTitle.length === 0) {
+    if (!trimmedTitle) {
       setError('Title should not be empty');
       inputRef.current?.focus();
 
@@ -66,9 +68,10 @@ export const App: React.FC = () => {
     }
 
     setIsDisabledInput(true);
+
     const tempTodo: Todo = {
       id: 0,
-      userId: 3177,
+      userId: USER_ID,
       title: trimmedTitle,
       completed: false,
     };
@@ -76,11 +79,7 @@ export const App: React.FC = () => {
     setTodos(prev => [...prev, tempTodo]);
 
     try {
-      const newTodo = await addTodos({
-        title: trimmedTitle,
-        completed: false,
-        userId: 3177,
-      });
+      const newTodo = await addTodos(tempTodo);
 
       setTodos(prev => prev.map(todo => (todo.id === 0 ? newTodo : todo)));
       setSearchTerm('');
@@ -93,29 +92,27 @@ export const App: React.FC = () => {
     }
   }
 
-  function removeTodos(todoId: number) {
-    return deleteTodo(todoId)
-      .then(() => {
-        setTodos(prev => prev.filter(todo => todo.id !== todoId));
-        inputRef.current?.focus();
-      })
-      .catch(() => {
-        setError('Unable to delete a todo');
-      });
+  async function removeTodos(todoId: number) {
+    try {
+      await deleteTodo(todoId);
+      setTodos(prev => cleanTodos(prev.filter(todo => todo.id !== todoId)));
+      inputRef.current?.focus();
+    } catch {
+      setError('Unable to delete a todo');
+    }
   }
 
-  function changeTodo(todoId: number, title: string, completed: boolean) {
-    return patchTodos({ id: todoId, title, completed, userId: 3177 })
-      .then(() => {
-        setTodos(prevTodos =>
-          prevTodos.map(todo =>
-            todo.id === todoId ? { ...todo, title, completed } : todo,
-          ),
-        );
-      })
-      .catch(() => {
-        setError('Unable to update a todo');
-      });
+  async function changeTodo(todoId: number, title: string, completed: boolean) {
+    try {
+      await patchTodos({ id: todoId, title, completed, userId: USER_ID });
+      setTodos(prev =>
+        prev.map(todo =>
+          todo.id === todoId ? { ...todo, title, completed } : todo,
+        ),
+      );
+    } catch {
+      setError('Unable to update a todo');
+    }
   }
 
   function changeComplite() {
@@ -161,14 +158,10 @@ export const App: React.FC = () => {
           (_, index) => results[index].status === 'rejected',
         );
 
-        setTodos(prevTodos =>
-          prevTodos.filter(todo => {
-            if (!todo.completed) {
-              return true;
-            }
-
-            return failedTodos.some(failed => failed.id === todo.id);
-          }),
+        setTodos(prev =>
+          cleanTodos(prev).filter(
+            todo => !todo.completed || failedTodos.some(f => f.id === todo.id),
+          ),
         );
         inputRef.current?.focus();
         if (failedTodos.length > 0) {
@@ -199,7 +192,8 @@ export const App: React.FC = () => {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
         />
-        {todos.length > 0 && (
+
+        {cleanTodos(todos).length > 0 && (
           <>
             <TodoList
               todos={filteredTodos}
