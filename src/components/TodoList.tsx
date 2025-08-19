@@ -147,16 +147,14 @@ export const TodoList: React.FC<TodoListProps> = ({
             </>
           )}
 
-          {isLoadingId === todo.id && (
-            <div
-              className="modal overlay is-active"
-              data-cy="TodoLoader"
-              aria-hidden="true"
-            >
-              <div className="modal-background has-background-white-ter" />
-              <div className="loader" />
-            </div>
-          )}
+          <div
+            className={`modal overlay ${isLoadingId === todo.id ? 'is-active' : ''}`}
+            data-cy="TodoLoader"
+            aria-hidden="true"
+          >
+            <div className="modal-background has-background-white-ter" />
+            <div className="loader" />
+          </div>
         </div>
       ))}
     </section>
