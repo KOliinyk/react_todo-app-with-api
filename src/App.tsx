@@ -16,18 +16,16 @@ import { ErrorTodos } from './components/ErrorTodos';
 type Filter = 'All' | 'Active' | 'Completed';
 
 export const App: React.FC = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todos, setTodos] = useState<(Todo & { loading?: boolean })[]>([]);
   const [error, setError] = useState('');
   const [filterSelect, setFilterSelected] = useState<Filter>('All');
   const [isDisabledInput, setIsDisabledInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Утиліта для видалення порожніх todo
   const cleanTodos = (todoList: Todo[]) =>
     todoList.filter(t => t.title.trim() !== '');
 
-  // Завантаження з localStorage або API
   useEffect(() => {
     const saved = localStorage.getItem('todos');
 
@@ -40,7 +38,6 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Збереження в localStorage при зміні todos
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(cleanTodos(todos)));
   }, [todos]);
@@ -69,23 +66,29 @@ export const App: React.FC = () => {
 
     setIsDisabledInput(true);
 
-    const tempTodo: Todo = {
-      id: 0,
+    // Новий тимчасовий Todo з лоадером
+    const tempTodo: Todo & { loading?: boolean } = {
+      id: Date.now(), // тимчасовий id
       userId: USER_ID,
       title: trimmedTitle,
       completed: false,
+      loading: true,
     };
 
     setTodos(prev => [...prev, tempTodo]);
+    setSearchTerm('');
 
     try {
-      const newTodo = await addTodos(tempTodo);
+      const newTodo = await addTodos({ ...tempTodo, id: 0 }); // id 0 для API
 
-      setTodos(prev => prev.map(todo => (todo.id === 0 ? newTodo : todo)));
-      setSearchTerm('');
+      setTodos(prev =>
+        prev.map(todo =>
+          todo.id === tempTodo.id ? { ...newTodo, loading: false } : todo,
+        ),
+      );
     } catch {
       setError('Unable to add a todo');
-      setTodos(prev => prev.filter(todo => todo.id !== 0));
+      setTodos(prev => prev.filter(todo => todo.id !== tempTodo.id));
     } finally {
       setIsDisabledInput(false);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -192,7 +195,6 @@ export const App: React.FC = () => {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
         />
-
         {cleanTodos(todos).length > 0 && (
           <>
             <TodoList

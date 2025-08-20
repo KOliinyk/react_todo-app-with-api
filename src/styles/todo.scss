@@ -6,6 +6,42 @@
   font-size: 24px;
   line-height: 1.4em;
   border-bottom: 1px solid #ededed;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+
+   &.todo--adding {
+    opacity: 0;
+    transform: translateY(-10px);
+    animation: fade-in 0.3s forwards;
+  }
+
+  &__loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 2rem;
+    .loader {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top-color: #333;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .todo:last-of-type {

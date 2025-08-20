@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Todo } from '../types/Todo';
 
 type TodoListProps = {
-  todos: Todo[];
+  todos: (Todo & { loading?: boolean })[];
   deleteTodo: (id: number) => Promise<void>;
   changeTodo: (id: number, title: string, completed: boolean) => Promise<void>;
   toggleAll: () => void;
@@ -20,7 +20,6 @@ export const TodoList: React.FC<TodoListProps> = ({
   const [isLoadingId, setIsLoadingId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Фокусуємо інпут при початку редагування
   useEffect(() => {
     if (isEditingId !== null) {
       inputRef.current?.focus();
@@ -86,7 +85,9 @@ export const TodoList: React.FC<TodoListProps> = ({
       {todos.map(todo => (
         <div
           key={todo.id}
-          className={`todo${todo.completed ? ' completed' : ''}`}
+          className={`todo${todo.completed ? ' completed' : ''} ${
+            todo.loading ? 'todo--adding' : ''
+          }`}
           data-cy="Todo"
         >
           <label
@@ -100,6 +101,7 @@ export const TodoList: React.FC<TodoListProps> = ({
               onChange={() => handleChangeStatus(todo)}
               className="todo__status"
               data-cy="TodoStatus"
+              disabled={todo.loading}
             />
             <span className="visually-hidden">Позначити як виконане</span>
           </label>
@@ -121,6 +123,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 onBlur={() => saveEditing(todo)}
                 onKeyDown={e => e.key === 'Escape' && cancelEditing()}
                 placeholder="Empty todo will be deleted"
+                disabled={todo.loading}
               />
             </form>
           ) : (
@@ -129,8 +132,10 @@ export const TodoList: React.FC<TodoListProps> = ({
                 className="todo__title"
                 data-cy="TodoTitle"
                 onDoubleClick={() => {
-                  setIsEditingId(todo.id);
-                  setEditTitle(todo.title);
+                  if (!todo.loading) {
+                    setIsEditingId(todo.id);
+                    setEditTitle(todo.title);
+                  }
                 }}
               >
                 {todo.title}
@@ -141,20 +146,23 @@ export const TodoList: React.FC<TodoListProps> = ({
                 className="todo__remove"
                 data-cy="TodoDelete"
                 onClick={() => handleDelete(todo.id)}
+                disabled={todo.loading}
               >
                 ×
               </button>
             </>
           )}
 
-          <div
-            className={`modal overlay ${isLoadingId === todo.id ? 'is-active' : ''}`}
-            data-cy="TodoLoader"
-            aria-hidden="true"
-          >
-            <div className="modal-background has-background-white-ter" />
-            <div className="loader" />
-          </div>
+          {(todo.loading || isLoadingId === todo.id) && (
+            <div
+              className="modal overlay is-active"
+              data-cy="TodoLoader"
+              aria-hidden="true"
+            >
+              <div className="modal-background has-background-white-ter" />
+              <div className="loader" />
+            </div>
+          )}
         </div>
       ))}
     </section>
