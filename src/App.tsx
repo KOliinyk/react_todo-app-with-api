@@ -125,26 +125,37 @@ export const App: React.FC = () => {
     }
   }
 
-  // Toggle All
   function changeComplite() {
     const isAllCompleted = todos.every(todo => todo.completed);
-    const updatedTodos = todos.map(todo => ({
-      ...todo,
-      completed: !isAllCompleted,
-    }));
+    const updatedTodos = isAllCompleted
+      ? todos
+      : todos.filter(todo => !todo.completed);
 
-    setTodos(updatedTodos);
+    setTodos(todo => {
+      if (todo.completed !== !isAllCompleted) {
+        return { ...todo, loading: true };
+      }
 
+      return todo;
+    });
     Promise.all(
-      todos.map(todo =>
+      updatedTodos.map(todo =>
         patchTodos({
-          id: todo.id,
-          title: todo.title,
+          ...todo,
           completed: !isAllCompleted,
-          userId: todo.userId,
         }),
       ),
-    ).catch(() => setError('Unable to update todos'));
+    )
+      .then(() =>
+        setTodos(todo => {
+          if (todo.completed !== !isAllCompleted) {
+            return { ...todo, completed: !isAllCompleted, loading: false };
+          }
+
+          return todo;
+        }),
+      )
+      .catch(() => setError('Unable to update todos'));
   }
 
   // Фільтрація
