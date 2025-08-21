@@ -10,15 +10,15 @@ import {
 import { Todo } from './types/Todo';
 import { TodoList } from './components/TodoList';
 import { FormTodo } from './components/FormTodos';
-import { FooterTodos } from './components/FooterTodos';
+import { FooterTodos, FilterType } from './components/FooterTodos';
 import { ErrorTodos } from './components/ErrorTodos';
-
-type Filter = 'All' | 'Active' | 'Completed';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<(Todo & { loading?: boolean })[]>([]);
   const [error, setError] = useState('');
-  const [filterSelect, setFilterSelected] = useState<Filter>('All');
+  const [filterSelect, setFilterSelected] = useState<FilterType>(
+    FilterType.All,
+  );
   const [isDisabledInput, setIsDisabledInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +26,7 @@ export const App: React.FC = () => {
   const cleanTodos = (todoList: Todo[]) =>
     todoList.filter(t => t.title.trim() !== '');
 
+  // Завантаження туду
   useEffect(() => {
     const saved = localStorage.getItem('todos');
 
@@ -38,22 +39,25 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Зберігання у localStorage
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(cleanTodos(todos)));
   }, [todos]);
 
+  // Фільтровані туду
   const filteredTodos = cleanTodos(todos).filter(todo => {
-    if (filterSelect === 'Active') {
+    if (filterSelect === FilterType.Active) {
       return !todo.completed;
     }
 
-    if (filterSelect === 'Completed') {
+    if (filterSelect === FilterType.Completed) {
       return todo.completed;
     }
 
     return true;
   });
 
+  // Додавання нового туду
   async function postTodos(title: string) {
     const trimmedTitle = title.trim();
 
@@ -66,9 +70,8 @@ export const App: React.FC = () => {
 
     setIsDisabledInput(true);
 
-    // Новий тимчасовий Todo з лоадером
     const tempTodo: Todo & { loading?: boolean } = {
-      id: Date.now(), // тимчасовий id
+      id: Date.now(),
       userId: USER_ID,
       title: trimmedTitle,
       completed: false,
@@ -76,16 +79,18 @@ export const App: React.FC = () => {
     };
 
     setTodos(prev => [...prev, tempTodo]);
-    setSearchTerm('');
+
+    const { id, loading, ...restNewTodo } = tempTodo;
 
     try {
-      const newTodo = await addTodos({ ...tempTodo, id: 0 }); // id 0 для API
+      const newTodo = await addTodos({ ...restNewTodo });
 
       setTodos(prev =>
         prev.map(todo =>
           todo.id === tempTodo.id ? { ...newTodo, loading: false } : todo,
         ),
       );
+      setSearchTerm('');
     } catch {
       setError('Unable to add a todo');
       setTodos(prev => prev.filter(todo => todo.id !== tempTodo.id));
@@ -95,6 +100,7 @@ export const App: React.FC = () => {
     }
   }
 
+  // Видалення
   async function removeTodos(todoId: number) {
     try {
       await deleteTodo(todoId);
@@ -105,6 +111,7 @@ export const App: React.FC = () => {
     }
   }
 
+  // Редагування
   async function changeTodo(todoId: number, title: string, completed: boolean) {
     try {
       await patchTodos({ id: todoId, title, completed, userId: USER_ID });
@@ -118,26 +125,18 @@ export const App: React.FC = () => {
     }
   }
 
+  // Toggle All
   function changeComplite() {
     const isAllCompleted = todos.every(todo => todo.completed);
-    const todosToUpdate = todos.filter(
-      todo => todo.completed === isAllCompleted,
-    );
-
-    if (todosToUpdate.length === 0) {
-      return;
-    }
-
-    const updatedTodos = todos.map(todo =>
-      todosToUpdate.some(t => t.id === todo.id)
-        ? { ...todo, completed: !isAllCompleted }
-        : todo,
-    );
+    const updatedTodos = todos.map(todo => ({
+      ...todo,
+      completed: !isAllCompleted,
+    }));
 
     setTodos(updatedTodos);
 
     Promise.all(
-      todosToUpdate.map(todo =>
+      todos.map(todo =>
         patchTodos({
           id: todo.id,
           title: todo.title,
@@ -148,10 +147,12 @@ export const App: React.FC = () => {
     ).catch(() => setError('Unable to update todos'));
   }
 
-  function filter(type: Filter) {
+  // Фільтрація
+  function filter(type: FilterType) {
     setFilterSelected(type);
   }
 
+  // Очистка завершених
   function clearCompleted() {
     const completedTodos = todos.filter(todo => todo.completed);
 
@@ -166,6 +167,7 @@ export const App: React.FC = () => {
             todo => !todo.completed || failedTodos.some(f => f.id === todo.id),
           ),
         );
+
         inputRef.current?.focus();
         if (failedTodos.length > 0) {
           setError('Unable to delete a todo');
@@ -186,33 +188,37 @@ export const App: React.FC = () => {
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
       <div className="todoapp__content">
+        {/* Форма та toggle all */}
         <FormTodo
           postTodos={postTodos}
-          onToggleAll={changeComplite}
+          onToggleAll={todos.length ? changeComplite : () => {}}
           todos={todos}
           isDisabledInput={isDisabledInput}
           inputRef={inputRef}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
         />
+
         {cleanTodos(todos).length > 0 && (
           <>
             <TodoList
               todos={filteredTodos}
               deleteTodo={removeTodos}
               changeTodo={changeTodo}
-              toggleAll={changeComplite}
+              toggleAll={changeComplite} // додано для тесту
               showError={setError}
             />
             <FooterTodos
               todos={todos}
               filter={filter}
               clearCompleted={clearCompleted}
-              selected={filterSelect}
+              selected={filterSelect} // активний фільтр прив'язаний до стану
             />
           </>
         )}
       </div>
+
+      {/* Повідомлення про помилку */}
       <ErrorTodos error={error} clearError={clearError} />
     </div>
   );

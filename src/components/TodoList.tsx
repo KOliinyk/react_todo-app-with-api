@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Todo } from '../types/Todo';
+import classNames from 'classnames';
+import { Todo, FilterType } from '../types/Todo';
 
 type TodoListProps = {
-  todos: (Todo & { loading?: boolean })[];
+  todos: Todo[];
   deleteTodo: (id: number) => Promise<void>;
   changeTodo: (id: number, title: string, completed: boolean) => Promise<void>;
-  toggleAll: () => void;
   showError: (msg: string) => void;
+  filter: FilterType;
+  toggleAll: () => void;
 };
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -14,6 +16,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   deleteTodo,
   changeTodo,
   showError,
+  filter,
 }) => {
   const [isEditingId, setIsEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -56,14 +59,11 @@ export const TodoList: React.FC<TodoListProps> = ({
   const saveEditing = async (todo: Todo) => {
     const trimmedTitle = editTitle.trim();
 
-    if (trimmedTitle === todo.title) {
-      cancelEditing();
+    if (trimmedTitle === todo.title || trimmedTitle.length === 0) {
+      if (trimmedTitle.length === 0) {
+        await handleDelete(todo.id);
+      }
 
-      return;
-    }
-
-    if (trimmedTitle.length === 0) {
-      await handleDelete(todo.id);
       cancelEditing();
 
       return;
@@ -80,14 +80,31 @@ export const TodoList: React.FC<TodoListProps> = ({
     }
   };
 
+  const filteredTodos = todos.filter(todo => {
+    if (filter === 'All') {
+      return true;
+    }
+
+    if (filter === 'Active') {
+      return !todo.completed;
+    }
+
+    if (filter === 'Completed') {
+      return todo.completed;
+    }
+
+    return true;
+  });
+
   return (
     <section className="todoapp__main" data-cy="TodoList">
-      {todos.map(todo => (
+      {filteredTodos.map(todo => (
         <div
           key={todo.id}
-          className={`todo${todo.completed ? ' completed' : ''} ${
-            todo.loading ? 'todo--adding' : ''
-          }`}
+          className={classNames('todo', {
+            completed: todo.completed,
+            'todo--adding': todo.loading,
+          })}
           data-cy="Todo"
         >
           <label
@@ -140,7 +157,6 @@ export const TodoList: React.FC<TodoListProps> = ({
               >
                 {todo.title}
               </span>
-
               <button
                 type="button"
                 className="todo__remove"

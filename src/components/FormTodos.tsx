@@ -34,14 +34,16 @@ export const FormTodo: React.FC<FormTodoProps> = ({
 
   return (
     <header className="todoapp__header">
-      <button
-        type="button"
-        className={
-          isActive ? 'todoapp__toggle-all active' : 'todoapp__toggle-all'
-        }
-        data-cy="ToggleAllButton"
-        onClick={onToggleAll}
-      />
+      {todos.length > 0 && (
+        <button
+          type="button"
+          className={
+            isActive ? 'todoapp__toggle-all active' : 'todoapp__toggle-all'
+          }
+          data-cy="ToggleAllButton"
+          onClick={onToggleAll}
+        />
+      )}
 
       <form
         onSubmit={async e => {
