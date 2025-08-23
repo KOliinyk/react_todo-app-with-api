@@ -131,13 +131,15 @@ export const App: React.FC = () => {
       ? todos
       : todos.filter(todo => !todo.completed);
 
-    setTodos(todo => {
-      if (todo.completed !== !isAllCompleted) {
-        return { ...todo, loading: true };
-      }
+    setTodos(prevTodos =>
+      prevTodos.map(todo => {
+        if (todo.completed !== !isAllCompleted) {
+          return { ...todo, loading: true };
+        }
 
-      return todo;
-    });
+        return todo;
+      }),
+    );
     Promise.all(
       updatedTodos.map(todo =>
         patchTodos({
@@ -147,13 +149,15 @@ export const App: React.FC = () => {
       ),
     )
       .then(() =>
-        setTodos(todo => {
-          if (todo.completed !== !isAllCompleted) {
-            return { ...todo, completed: !isAllCompleted, loading: false };
-          }
+        setTodos(prevTodos =>
+          prevTodos.map(todo => {
+            if (todo.completed !== !isAllCompleted) {
+              return { ...todo, completed: !isAllCompleted, loading: false };
+            }
 
-          return todo;
-        }),
+            return todo;
+          }),
+        ),
       )
       .catch(() => setError('Unable to update todos'));
   }
