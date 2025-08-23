@@ -75,6 +75,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       cancelEditing();
     } catch {
       showError('Unable to update a todo');
+      setIsEditingId(todo.id);
     } finally {
       setIsLoadingId(null);
     }
@@ -107,21 +108,16 @@ export const TodoList: React.FC<TodoListProps> = ({
           })}
           data-cy="Todo"
         >
-          <label
-            htmlFor={`todo-status-${todo.id}`}
-            className="todo__status-label"
-          >
-            <input
-              id={`todo-status-${todo.id}`}
-              type="checkbox"
-              checked={todo.completed}
-              onChange={() => handleChangeStatus(todo)}
-              className="todo__status"
-              data-cy="TodoStatus"
-              disabled={todo.loading}
-            />
-            <span className="visually-hidden">Позначити як виконане</span>
-          </label>
+          <input
+            id={`todo-status-${todo.id}`}
+            type="checkbox"
+            checked={todo.completed}
+            onChange={() => handleChangeStatus(todo)}
+            className="todo__status"
+            data-cy="TodoStatus"
+            disabled={todo.loading}
+          />
+          <span className="visually-hidden">Позначити як виконане</span>
 
           {isEditingId === todo.id ? (
             <form

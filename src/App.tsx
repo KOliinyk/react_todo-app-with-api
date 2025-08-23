@@ -120,8 +120,9 @@ export const App: React.FC = () => {
           todo.id === todoId ? { ...todo, title, completed } : todo,
         ),
       );
-    } catch {
+    } catch (err) {
       setError('Unable to update a todo');
+      throw err;
     }
   }
 
