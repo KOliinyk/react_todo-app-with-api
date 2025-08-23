@@ -101,11 +101,12 @@ export const App: React.FC = () => {
   }
 
   // Видалення
-  async function removeTodos(todoId: number) {
+  async function removeTodos(todoId: number, onSuccess?: VoidFunction) {
     try {
       await deleteTodo(todoId);
       setTodos(prev => cleanTodos(prev.filter(todo => todo.id !== todoId)));
       inputRef.current?.focus();
+      onSuccess?.();
     } catch {
       setError('Unable to delete a todo');
     }

@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import classNames from 'classnames';
-import { Todo, FilterType } from '../types/Todo';
+import { Todo } from '../types/Todo';
 
 type TodoListProps = {
   todos: Todo[];
-  deleteTodo: (id: number) => Promise<void>;
+  deleteTodo: (id: number, onSuccess?: VoidFunction) => Promise<void>;
   changeTodo: (id: number, title: string, completed: boolean) => Promise<void>;
   showError: (msg: string) => void;
-  filter: FilterType;
   toggleAll: () => void;
 };
 
@@ -16,7 +15,6 @@ export const TodoList: React.FC<TodoListProps> = ({
   deleteTodo,
   changeTodo,
   showError,
-  filter,
 }) => {
   const [isEditingId, setIsEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -37,7 +35,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   const handleDelete = async (id: number) => {
     setIsLoadingId(id);
     try {
-      await deleteTodo(id);
+      await deleteTodo(id, cancelEditing);
     } catch {
       showError('Unable to delete a todo');
     } finally {
@@ -59,12 +57,14 @@ export const TodoList: React.FC<TodoListProps> = ({
   const saveEditing = async (todo: Todo) => {
     const trimmedTitle = editTitle.trim();
 
-    if (trimmedTitle === todo.title || trimmedTitle.length === 0) {
-      if (trimmedTitle.length === 0) {
-        await handleDelete(todo.id);
-      }
-
+    if (trimmedTitle === todo.title) {
       cancelEditing();
+
+      return;
+    }
+
+    if (trimmedTitle.length === 0) {
+      await handleDelete(todo.id);
 
       return;
     }
@@ -81,43 +81,27 @@ export const TodoList: React.FC<TodoListProps> = ({
     }
   };
 
-  const filteredTodos = todos.filter(todo => {
-    if (filter === 'All') {
-      return true;
-    }
-
-    if (filter === 'Active') {
-      return !todo.completed;
-    }
-
-    if (filter === 'Completed') {
-      return todo.completed;
-    }
-
-    return true;
-  });
-
   return (
     <section className="todoapp__main" data-cy="TodoList">
-      {filteredTodos.map(todo => (
+      {todos.map(todo => (
         <div
           key={todo.id}
           className={classNames('todo', {
             completed: todo.completed,
-            'todo--adding': todo.loading,
           })}
           data-cy="Todo"
         >
-          <input
-            id={`todo-status-${todo.id}`}
-            type="checkbox"
-            checked={todo.completed}
-            onChange={() => handleChangeStatus(todo)}
-            className="todo__status"
-            data-cy="TodoStatus"
-            disabled={todo.loading}
-          />
-          <span className="visually-hidden">Позначити як виконане</span>
+          <label className="todo__status-label" aria-label="status">
+            <input
+              id={`todo-status-${todo.id}`}
+              type="checkbox"
+              checked={todo.completed}
+              onChange={() => handleChangeStatus(todo)}
+              className="todo__status"
+              data-cy="TodoStatus"
+              disabled={todo.loading}
+            />
+          </label>
 
           {isEditingId === todo.id ? (
             <form

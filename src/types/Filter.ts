@@ -3,5 +3,3 @@ export enum Filter {
   Active = 'active',
   Completed = 'completed',
 }
-
-export type FilterType = 'All' | 'Active' | 'Completed';
